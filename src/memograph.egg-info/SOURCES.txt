@@ -12,4 +12,11 @@ src/memograph/core/db.py
 src/memograph/core/llm/__init__.py
 src/memograph/core/llm/base.py
 src/memograph/core/llm/ollama.py
+src/memograph/data/__init__.py
+src/memograph/data/cache.py
+src/memograph/data/edgar.py
+src/memograph/data/market.py
+src/memograph/data/news.py
+src/memograph/data/schemas.py
 tests/test_config.py
+tests/test_data.py

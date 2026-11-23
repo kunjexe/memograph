@@ -14,7 +14,7 @@ NEWSAPI_URL = "https://newsapi.org/v2/everything"
 # Legal-form words that people don't use when writing about a company.
 _LEGAL_WORDS = {
     "inc", "incorporated", "corp", "corporation", "co", "company", "ltd", "limited", "plc",
-    "holdings", "holding", "group", "ag", "se", "sa", "nv", "spa", "gmbh", "kgaa", "the",
+    "holdings", "holding", "group", "ag", "aktiengesellschaft", "se", "sa", "nv", "spa", "gmbh", "kgaa", "the",
 }
 
 

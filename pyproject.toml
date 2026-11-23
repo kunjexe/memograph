@@ -11,6 +11,7 @@ dependencies = [
   "asyncpg>=0.29",
   "redis>=5.0",
   "yfinance>=0.2.50",
+  "langgraph>=0.2",
 ]
 
 [project.optional-dependencies]

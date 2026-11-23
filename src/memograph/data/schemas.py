@@ -16,6 +16,7 @@ class NewsArticle(BaseModel):
     url: str
     published_at: datetime
     description: str | None = None
+    language: str = "en"
 
 
 class FinancialFact(BaseModel):
@@ -28,6 +29,9 @@ class FinancialFact(BaseModel):
 
 class Fundamentals(BaseModel):
     ticker: str
-    cik: str           # the SEC's ID number for the company
     company_name: str
     facts: dict[str, FinancialFact]  # e.g. "revenue" -> latest yearly value
+    source: str = "SEC EDGAR"        # or "Yahoo Finance" outside the US
+    country: str = "United States"
+    cik: str | None = None           # the SEC's ID number (US companies only)
+    source_url: str | None = None    # link to the original report, for citations

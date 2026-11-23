@@ -28,6 +28,7 @@ class CacheEntry(Base):
 
 TTL = {
     "edgar": timedelta(days=30),   # filings change a few times a year
+    "fundamentals": timedelta(days=30),  # Yahoo annual statements
     "news": timedelta(hours=6),
     "prices": timedelta(hours=1),
 }

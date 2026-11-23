@@ -35,7 +35,7 @@ async def _fetch_language(query: str, lang: str, start: date, end: date) -> list
     async def fetch() -> list[dict]:
         params = {
             "q": query, "from": start.isoformat(), "to": end.isoformat(),
-            "language": lang, "sortBy": "publishedAt", "pageSize": 50,
+            "language": lang, "sortBy": "relevancy", "pageSize": 50,
         }
         async with httpx.AsyncClient(timeout=20) as client:
             r = await client.get(NEWSAPI_URL, params=params, headers={"X-Api-Key": settings.newsapi_key})
@@ -49,21 +49,33 @@ async def _fetch_language(query: str, lang: str, start: date, end: date) -> list
             if a.get("title") and a["title"] != "[Removed]"
         ]
 
-    return await cached("news", f"{lang}:{query}:{start}:{end}", fetch)
+    return await cached("news", f"{lang}:rel:{query}:{start}:{end}", fetch)
 
 
 async def get_news(
     query: str, end: date | None = None, days: int = 30, languages: tuple[str, ...] = ("en",)
 ) -> list[NewsArticle]:
-    """Recent articles matching `query` in each language, merged, newest first."""
+    """Articles matching `query`, MOST RELEVANT FIRST, across the whole period.
+
+    Why relevance and not newest: sorting by date meant the agent only saw the last day
+    or two, and a big story from two weeks ago was cut. Languages are interleaved
+    (1st German, 1st English, 2nd German...) and repeated headlines are dropped.
+    """
     if not settings.newsapi_key:
         return []  # June lesson: a missing key means "no news", never a crash
     end = end or date.today()
     start = end - timedelta(days=days)
-    seen, articles = set(), []
-    for lang in languages:
-        for a in await _fetch_language(query, lang, start, end):
-            if a["url"] not in seen:
-                seen.add(a["url"])
-                articles.append(NewsArticle(**a))
-    return sorted(articles, key=lambda a: a.published_at, reverse=True)
+    per_lang = [await _fetch_language(query, lang, start, end) for lang in languages]
+    seen_urls, seen_titles, articles = set(), set(), []
+    for rank in range(max((len(x) for x in per_lang), default=0)):
+        for results in per_lang:
+            if rank >= len(results):
+                continue
+            a = results[rank]
+            title_key = " ".join(a["title"].lower().split())[:80]
+            if a["url"] in seen_urls or title_key in seen_titles:
+                continue  # the same story syndicated by many sites
+            seen_urls.add(a["url"])
+            seen_titles.add(title_key)
+            articles.append(NewsArticle(**a))
+    return articles

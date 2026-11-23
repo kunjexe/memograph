@@ -86,3 +86,26 @@ async def get_fundamentals(ticker: str, before: date | None = None) -> Fundament
         ticker=ticker, company_name=raw["name"], facts=facts,
         source="Yahoo Finance", country=market_for(ticker).country,
     )
+
+
+FINANCIAL_SECTORS = {"Financial Services"}
+
+
+async def get_sector(ticker: str) -> dict:
+    """{'sector': 'Financial Services', 'industry': 'Banks - Regional'} from Yahoo, cached 30 days."""
+    ticker = ticker.upper()
+
+    def fetch_sync() -> dict:
+        info = yf.Ticker(ticker).info or {}
+        return {"sector": info.get("sector") or "unknown", "industry": info.get("industry") or "unknown"}
+
+    async def fetch() -> dict:
+        return await asyncio.to_thread(fetch_sync)
+
+    return await cached("fundamentals", f"sector:{ticker}", fetch)
+
+
+def is_financial(sector: dict) -> bool:
+    """Banks, insurers and similar: judged differently from ordinary companies."""
+    industry = sector.get("industry", "").lower()
+    return sector.get("sector") in FINANCIAL_SECTORS or any(w in industry for w in ("bank", "insurance"))

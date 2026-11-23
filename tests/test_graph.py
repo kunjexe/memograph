@@ -50,6 +50,10 @@ def fake(monkeypatch):
     monkeypatch.setattr(agents, "get_fundamentals", fundamentals)
     monkeypatch.setattr(agents, "get_prices", prices)
     monkeypatch.setattr(agents, "get_news", news)
+    async def sector(ticker):
+        return {"sector": "Technology", "industry": "Software"}
+
+    monkeypatch.setattr(agents, "get_sector", sector)
     monkeypatch.setattr(agents, "get_provider", lambda: llm)
     return llm
 
@@ -81,3 +85,18 @@ async def test_no_news_skips_llm(fake, monkeypatch):
     monkeypatch.setattr(agents, "get_news", none)
     s = await run_research("test")
     assert s["news"]["sentiment"] == "neutral" and "NewsAnalysis" not in fake.prompts
+
+
+async def test_bank_gets_bank_guidance(fake, monkeypatch):
+    async def bank(ticker):
+        return {"sector": "Financial Services", "industry": "Banks - Regional"}
+    monkeypatch.setattr(agents, "get_sector", bank)
+    s = await run_research("test")
+    assert s["financial_company"] is True
+    assert "bank, insurer" in fake.prompts["FundamentalsAnalysis"]
+    assert "bank, insurer" in fake.prompts["RiskAnalysis"]
+
+
+async def test_data_risk_sentence_only_without_news(fake):
+    await run_research("test")   # fake news has 1 article
+    assert "No news articles were available" not in fake.prompts["RiskAnalysis"]

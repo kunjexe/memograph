@@ -44,3 +44,20 @@ def test_company_query():
 async def test_news_without_key_returns_empty(monkeypatch):
     monkeypatch.setattr(settings, "newsapi_key", "")
     assert await get_news("apple") == []
+
+
+async def test_news_relevance_interleave_and_dedupe(monkeypatch):
+    from memograph.data import news as news_mod
+    def art(title, url, lang):
+        return {"title": title, "source": "s", "url": url, "published_at": "2026-11-20T10:00:00Z",
+                "description": None, "language": lang}
+    fake = {
+        "de": [art("Bank Skandal", "u1", "de"), art("Zweite", "u2", "de")],
+        "en": [art("Bank scandal deepens", "u3", "en"), art("bank SKANDAL", "u4", "en")],
+    }
+    async def fetch(query, lang, start, end):
+        return fake[lang]
+    monkeypatch.setattr(settings, "newsapi_key", "x" * 32)
+    monkeypatch.setattr(news_mod, "_fetch_language", fetch)
+    titles = [a.title for a in await get_news("q", languages=("de", "en"))]
+    assert titles == ["Bank Skandal", "Bank scandal deepens", "Zweite"]  # interleaved, duplicate headline dropped

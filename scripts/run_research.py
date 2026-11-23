@@ -11,8 +11,10 @@ from memograph.data.cache import init_db
 from memograph.research.graph import run_research
 
 
-def pct(x) -> str:
-    return f"{x * 100:+.1f}%" if isinstance(x, (int, float)) else "n/a"
+def pct(x, sign: bool = True) -> str:
+    if not isinstance(x, (int, float)):
+        return "n/a"
+    return f"{x * 100:+.1f}%" if sign else f"{x * 100:.1f}%"
 
 
 async def main(ticker: str) -> None:
@@ -44,7 +46,7 @@ async def main(ticker: str) -> None:
     if m := s.get("market"):
         st = s.get("market_stats", {})
         print(f"\n[Market] trend: {m['trend'].upper()}   (1y {pct(st.get('return_period'))}, "
-              f"volatility {pct(st.get('volatility_annual'))}, max drawdown {pct(st.get('max_drawdown'))})")
+              f"volatility {pct(st.get('volatility_annual'), sign=False)}, max drawdown {pct(st.get('max_drawdown'))})")
         print(" ", m["summary"])
         for x in m["observations"]:
             print("   -", x)

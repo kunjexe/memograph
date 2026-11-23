@@ -26,3 +26,19 @@ def test_market_stats():
     assert s["last_close"] == 200 and s["days_of_data"] == 202
     assert s["max_drawdown"] == -0.2           # 250 -> 200
     assert "ma200" in s and "ma50" in s
+
+
+def test_bank_ratios_skip_misleading_ones():
+    f = Fundamentals(ticker="B", company_name="B", facts={
+        "revenue": fact(100), "net_income": fact(20), "stockholders_equity": fact(80),
+        "long_term_debt": fact(150), "operating_cash_flow": fact(500), "capex": fact(10)})
+    r = fundamental_ratios(f, financial=True)
+    assert r["net_margin"] == 0.2 and r["return_on_equity"] == 0.25
+    assert "debt_to_equity" not in r and "free_cash_flow" not in r
+
+
+def test_is_financial():
+    from memograph.data.yahoo_fundamentals import is_financial
+    assert is_financial({"sector": "Financial Services", "industry": "Banks - Regional"})
+    assert is_financial({"sector": "unknown", "industry": "Insurance - Diversified"})
+    assert not is_financial({"sector": "Technology", "industry": "Software"})

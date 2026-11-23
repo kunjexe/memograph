@@ -14,7 +14,7 @@ class FundamentalsAnalysis(BaseModel):
 
 class Catalyst(BaseModel):
     article_id: int = Field(description="id of the article this event comes from")
-    event: str = Field(description="what happened, in one sentence")
+    event: str = Field(description="what happened, in one sentence, keeping the specifics: who is involved, what exactly happened, and amounts or dates if given. Never generalise (write 'leak of client data linked to X', not 'a data leak').")
     impact: Literal["positive", "negative", "unclear"]
 
 

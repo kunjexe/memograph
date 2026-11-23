@@ -24,6 +24,8 @@ class ResearchState(TypedDict, total=False):
     as_of: date | None          # None = today; a past date in backtests (no look-ahead)
     company_name: str
     country: str
+    sector: dict                # {'sector': ..., 'industry': ...} from Yahoo
+    financial_company: bool     # bank/insurer: judged differently
     fundamentals_data: dict | None
     ratios: dict
     market_stats: dict

@@ -11,7 +11,9 @@ from memograph.data.schemas import Fundamentals, PriceBar
 TRADING_DAYS = 252  # trading days in a year
 
 
-def fundamental_ratios(f: Fundamentals) -> dict[str, float]:
+def fundamental_ratios(f: Fundamentals, financial: bool = False) -> dict[str, float]:
+    """financial=True for banks/insurers: debt-to-equity, free cash flow and capex are left out,
+    because for them borrowing is the business and cash flows swing with customer deposits."""
     v = {k: fact.value for k, fact in f.facts.items()}
 
     def div(a: str, b: str) -> float | None:
@@ -22,10 +24,10 @@ def fundamental_ratios(f: Fundamentals) -> dict[str, float]:
     r = {
         "net_margin": div("net_income", "revenue"),                 # profit per euro/dollar of sales
         "return_on_equity": div("net_income", "stockholders_equity"),
-        "debt_to_equity": div("long_term_debt", "stockholders_equity"),
+        "debt_to_equity": None if financial else div("long_term_debt", "stockholders_equity"),
         "liabilities_to_assets": div("total_liabilities", "total_assets"),
     }
-    if "operating_cash_flow" in v and "capex" in v:
+    if not financial and "operating_cash_flow" in v and "capex" in v:
         fcf = v["operating_cash_flow"] - v["capex"]                 # free cash flow: cash left after investing
         r["free_cash_flow"] = round(fcf, 0)
         if v.get("revenue"):

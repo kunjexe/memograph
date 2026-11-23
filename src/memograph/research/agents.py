@@ -69,6 +69,9 @@ async def profile(state: dict) -> dict:
     return out
 
 
+# For banks these raw figures mislead (cash flows swing with deposits and loans), so the agent never sees them.
+BANK_HIDDEN_FACTS = {"operating_cash_flow", "capex", "long_term_debt"}
+
 FINANCIAL_GUIDANCE = (
     "This is a bank, insurer or other financial company. Its liabilities are mostly customer deposits or "
     "insurance reserves, so high leverage and very large cash flows are normal for its business and are NOT "
@@ -82,7 +85,11 @@ async def fundamentals_agent(state: dict) -> dict:
     data = state.get("fundamentals_data")
     if not data:
         raise ValueError("no financial data available (see profile error)")
-    facts = {k: {"value": v["value"], "unit": v["unit"], "year_end": v["period_end"]} for k, v in data["facts"].items()}
+    hidden = BANK_HIDDEN_FACTS if state.get("financial_company") else set()
+    facts = {
+        k: {"value": v["value"], "unit": v["unit"], "year_end": v["period_end"]}
+        for k, v in data["facts"].items() if k not in hidden
+    }
     prompt = (
         f"Company: {data['company_name']} ({state['ticker']}), {state.get('country')}. Source: {data['source']}.\n\n"
         f"Latest annual figures:\n{_dump(facts)}\n\n"

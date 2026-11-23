@@ -39,7 +39,7 @@ def fake(monkeypatch):
     f = FinancialFact(value=100.0, unit="EUR", period_end=date(2025, 12, 31), form="x", filed=date(2026, 3, 1))
 
     async def fundamentals(ticker, before=None):
-        return Fundamentals(ticker=ticker, company_name="Test AG", facts={"revenue": f, "net_income": f})
+        return Fundamentals(ticker=ticker, company_name="Test AG", facts={"revenue": f, "net_income": f, "operating_cash_flow": f})
 
     async def prices(ticker, end=None):
         return [PriceBar(day=date(2025, 1, 1) + timedelta(days=i), close=100 + i, volume=1) for i in range(250)]
@@ -95,6 +95,7 @@ async def test_bank_gets_bank_guidance(fake, monkeypatch):
     assert s["financial_company"] is True
     assert "bank, insurer" in fake.prompts["FundamentalsAnalysis"]
     assert "bank, insurer" in fake.prompts["RiskAnalysis"]
+    assert "operating_cash_flow" not in fake.prompts["FundamentalsAnalysis"]
 
 
 async def test_data_risk_sentence_only_without_news(fake):

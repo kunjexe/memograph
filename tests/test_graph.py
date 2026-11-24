@@ -16,6 +16,16 @@ CANNED = {
     "MarketAnalysis": {"trend": "uptrend", "summary": "s", "observations": ["o"]},
     "RiskAnalysis": {"overall_risk": "medium", "summary": "s",
                      "risks": [{"category": "company", "description": "d", "severity": "low"}]},
+    "Memo": {
+        "thesis": [{"text": "Test AG is profitable.", "sources": ["F:revenue"]}],
+        "fundamentals": [{"text": "Revenue was 100 EUR.", "sources": ["F:revenue"]},
+                         {"text": "Revenue was 999 EUR.", "sources": ["F:revenue"]}],
+        "recent_developments": [{"text": "Test AG won a contract.", "sources": ["N0"]}],
+        "technicals": [{"text": "Invented statistic.", "sources": ["M:made_up"]}],
+        "risks": [{"text": "There are risks.", "sources": []}],
+        "recommendation": "hold", "confidence": 60,
+        "recommendation_reason": [{"text": "Revenue is solid.", "sources": ["F:revenue"]}],
+    },
 }
 
 
@@ -66,7 +76,11 @@ async def test_full_run(fake):
     assert s["risk"]["overall_risk"] == "medium"
     assert [c["article_id"] for c in s["news"]["catalysts"]] == [0]   # invented article 99 dropped
     assert s["errors"] == {}
-    assert set(s["timings"]) == {"profile", "fundamentals", "news", "market", "risk"}
+    assert set(s["timings"]) == {"profile", "fundamentals", "news", "market", "risk", "memo_writer", "citation_check"}
+    rep = s["citation_report"]
+    assert rep["total"] == 7 and rep["kept"] == 4          # 999, M:made_up and the uncited risk dropped
+    assert s["memo"]["recommendation"] == "hold" and s["memo"]["confidence"] == 60
+    assert "[F:revenue]" in fake.prompts["Memo"] and "[N0]" in fake.prompts["Memo"]
 
 
 async def test_one_agent_fails_rest_continue(fake, monkeypatch):
@@ -95,6 +109,7 @@ async def test_bank_gets_bank_guidance(fake, monkeypatch):
     assert s["financial_company"] is True
     assert "bank, insurer" in fake.prompts["FundamentalsAnalysis"]
     assert "bank, insurer" in fake.prompts["RiskAnalysis"]
+    assert "bank, insurer" in fake.prompts["Memo"]   # the writer needs the bank context too
     assert "operating_cash_flow" not in fake.prompts["FundamentalsAnalysis"]
 
 

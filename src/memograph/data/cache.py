@@ -4,6 +4,7 @@ Why: free APIs have rate limits, repeated runs should be fast, and saved data
 makes tests and demos repeatable. Each source has its own "freshness" time (TTL).
 If an API call fails but we have an older copy, we use the old copy rather than crash.
 """
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable
 
@@ -41,6 +42,8 @@ def is_fresh(fetched_at: datetime, ttl: timedelta, now: datetime | None = None) 
 
 async def init_db() -> None:
     """Create the tables if they don't exist yet."""
+    import memograph.research.storage  # noqa: F401  (registers the memos table)
+
     async with get_engine().begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -53,6 +56,7 @@ async def cached(source: str, key: str, fetch: Callable[[], Awaitable[Any]]) -> 
             return entry.payload
         try:
             payload = await fetch()
+            json.dumps(payload, allow_nan=False)  # Postgres JSON can't store NaN: fail clearly, before the insert
         except Exception:
             if entry:  # API down: an old copy beats no data
                 return entry.payload

@@ -15,6 +15,8 @@ from memograph.data.markets import market_for
 from memograph.data.news import company_query, get_news
 from memograph.data.yahoo_fundamentals import get_sector, is_financial
 from memograph.research.metrics import fundamental_ratios, market_stats
+from memograph.research.memo import Memo, check_memo
+from memograph.research.sources import BANK_HIDDEN_FACTS, build_sources
 from memograph.research.schemas import FundamentalsAnalysis, MarketAnalysis, NewsAnalysis, RiskAnalysis
 
 SYSTEM = (
@@ -68,9 +70,6 @@ async def profile(state: dict) -> dict:
         out["errors"] = {"profile": f"{type(e).__name__}: {e}"}
     return out
 
-
-# For banks these raw figures mislead (cash flows swing with deposits and loans), so the agent never sees them.
-BANK_HIDDEN_FACTS = {"operating_cash_flow", "capex", "long_term_debt"}
 
 FINANCIAL_GUIDANCE = (
     "This is a bank, insurer or other financial company. Its liabilities are mostly customer deposits or "
@@ -164,3 +163,54 @@ async def risk_agent(state: dict) -> dict:
     )
     result = await ask(prompt, RiskAnalysis)
     return {"risk": result.model_dump()}
+
+
+WRITER_SYSTEM = (
+    "You write a short equity research memo. Every claim is one sentence and must cite the ids of the "
+    "sources that support it, chosen ONLY from the numbered source list. Copy numbers exactly as they are "
+    "written in the sources. Do not use outside knowledge: if a fact is not in the sources, leave it out. "
+    "The specialist analyses are opinions you may build on, but cite the source facts behind them. "
+    "Cite the 1 to 3 most relevant sources per claim, not every source that might fit. "
+    "Put source ids ONLY in the 'sources' field, never in the sentence text. Every section must say "
+    "something different: never repeat a sentence in two sections. Keep to the number of claims asked for. "
+    "Write in English. Reply only with JSON in the requested shape."
+)
+
+
+@node("memo_writer")
+async def memo_writer(state: dict) -> dict:
+    if not any(state.get(k) for k in ("fundamentals", "news", "market", "risk")):
+        raise ValueError("no analyses to write a memo from")
+    sources = build_sources(state)
+    source_list = "\n".join(f"[{s.id}] {s.label}" for s in sources.values())
+    # Only the conclusions, not every detail: a shorter prompt is faster and keeps the model focused.
+    analyses = {}
+    for k in ("fundamentals", "news", "market", "risk"):
+        a = state.get(k)
+        if a:
+            analyses[k] = {f: v for f, v in a.items() if f in ("financial_health", "sentiment", "trend", "overall_risk", "summary")}
+    prompt = (
+        f"Company: {state.get('company_name')} ({state['ticker']}), {state.get('country')}, "
+        f"sector {state.get('sector', {}).get('industry')}.\n\n"
+        f"SOURCES (cite these ids):\n{source_list}\n\n"
+        f"SPECIALIST ANALYSES (opinions, not citable):\n{_dump(analyses)}\n\n"
+        + (FINANCIAL_GUIDANCE if state.get("financial_company") else "")
+        + "Write the memo. Give a buy, hold or sell view with a confidence from 0 to 100."
+    )
+    draft = await get_provider().generate_structured(
+        prompt, Memo, model=settings.orchestrator_model, system=WRITER_SYSTEM
+    )
+    return {
+        "memo_draft": draft.model_dump(),
+        "sources": {s.id: {"label": s.label, "url": s.url} for s in sources.values()},
+    }
+
+
+@node("citation_check")
+async def citation_check(state: dict) -> dict:
+    """Plain code, no AI: keeps only claims whose sources exist and whose numbers appear in them."""
+    draft = state.get("memo_draft")
+    if not draft:
+        raise ValueError("no memo draft to check")
+    memo, report = check_memo(Memo.model_validate(draft), build_sources(state))
+    return {"memo": memo, "citation_report": report}

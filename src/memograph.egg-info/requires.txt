@@ -6,6 +6,8 @@ asyncpg>=0.29
 redis>=5.0
 yfinance>=0.2.50
 langgraph>=0.2
+fastapi>=0.115
+uvicorn[standard]>=0.30
 
 [dev]
 pytest>=8

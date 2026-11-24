@@ -6,6 +6,8 @@ src/memograph.egg-info/SOURCES.txt
 src/memograph.egg-info/dependency_links.txt
 src/memograph.egg-info/requires.txt
 src/memograph.egg-info/top_level.txt
+src/memograph/api/__init__.py
+src/memograph/api/main.py
 src/memograph/core/__init__.py
 src/memograph/core/config.py
 src/memograph/core/db.py
@@ -26,11 +28,15 @@ src/memograph/data/yahoo_fundamentals.py
 src/memograph/research/__init__.py
 src/memograph/research/agents.py
 src/memograph/research/graph.py
+src/memograph/research/memo.py
 src/memograph/research/metrics.py
 src/memograph/research/schemas.py
+src/memograph/research/sources.py
+src/memograph/research/storage.py
 tests/test_config.py
 tests/test_data.py
 tests/test_esef.py
 tests/test_graph.py
 tests/test_markets.py
+tests/test_memo.py
 tests/test_metrics.py

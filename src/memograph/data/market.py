@@ -19,10 +19,13 @@ async def get_prices(ticker: str, end: date | None = None, days: int = 365) -> l
 
     def fetch_sync() -> list[dict]:
         df = yf.Ticker(ticker).history(start=start.isoformat(), end=end.isoformat(), auto_adjust=True)
-        return [
-            {"day": idx.date().isoformat(), "close": float(row["Close"]), "volume": int(row["Volume"])}
-            for idx, row in df.iterrows()
-        ]
+        rows = []
+        for idx, row in df.iterrows():
+            close, volume = row["Close"], row["Volume"]
+            if close != close or volume != volume:  # NaN: Yahoo sometimes sends an incomplete latest day
+                continue
+            rows.append({"day": idx.date().isoformat(), "close": float(close), "volume": int(volume)})
+        return rows
 
     async def fetch() -> list[dict]:
         rows = await asyncio.to_thread(fetch_sync)  # yfinance isn't async, so run it in a thread
